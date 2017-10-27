@@ -1,4 +1,4 @@
-/*
+package com.jiandan.terence.rtvideotcpserver;/*
  * Copyright (C) 2016 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,7 +27,7 @@ public class TlvBox {
     public static final int IMAGE = 0x08;
     public static final int CONTENT = 0x09;
     private static final ByteOrder DEFAULT_BYTE_ORDER = ByteOrder.LITTLE_ENDIAN;
-    private static String TAG="TlvBox";
+    private static String TAG="com.jiandan.terence.rtvideotcpserver.TlvBox";
     private SparseArray<byte[]> mObjects;
     private int mTotalBytes = 0;
 

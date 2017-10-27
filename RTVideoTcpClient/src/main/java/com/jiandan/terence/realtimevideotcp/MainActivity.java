@@ -29,6 +29,8 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketException;
 
+import static com.jiandan.terence.realtimevideotcp.TlvBox.IMAGE;
+
 public class MainActivity extends AppCompatActivity implements SurfaceHolder.Callback, Camera.PreviewCallback {
     private Camera mCamera;
     private Camera.Parameters mParametars;
@@ -44,7 +46,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
     private Socket mSocket;
     private SurfaceView mSurfaceView;
     protected boolean isRun = false;
-    private String TAG = "MainActivity3";
+    private String TAG = "MainActivity4";
     Button mConnectButton;
     private String mIp;
 
@@ -63,6 +65,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
             @Override
             public void onClick(View v) {
                 mIp = mEtAddress.getText().toString();
+                isRun=true;
                 mSurfaceView.setVisibility(View.VISIBLE);
             }
         });
@@ -179,6 +182,10 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
      * @param imageData
      */
     private void sendVideo(final byte[] imageData) {
+
+        TlvBox tlvBox = new TlvBox();
+        tlvBox.putBytesValue(IMAGE, imageData);
+        final byte[] serialize = tlvBox.serialize();
         // 启用线程将图像数据发送出去
         new Thread(new Runnable() {
             @Override
@@ -187,11 +194,14 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
                     try {
                         long start = System.currentTimeMillis();
                         // 将图像数据通过Socket发送出去
-                        byte[] data = imageData;
+                        byte[] data = serialize;
                         Socket socket = new Socket();
                         socket.connect(new InetSocketAddress(mIp, 3000));
                         OutputStream outputStream = socket.getOutputStream();
                         outputStream.write(data);
+                        outputStream.flush();
+                        outputStream.close();
+                        socket.close();
                         Log.d(TAG, "send size = " + data.length);
                         Log.d(TAG, "send cost time =" + (System.currentTimeMillis() - start));
                     } catch (IOException e) {

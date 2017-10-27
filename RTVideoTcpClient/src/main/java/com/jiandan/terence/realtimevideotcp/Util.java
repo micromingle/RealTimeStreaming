@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+package com.jiandan.terence.realtimevideotcp;
+
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
@@ -37,7 +39,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 
-public class BitmapUtil {
+public class Util {
 
     public static Bitmap bytes2Bitmap(byte[] b) {
         if (b.length != 0) {
@@ -313,6 +315,10 @@ public class BitmapUtil {
         // 最后通知图库更新
         context.sendBroadcast(new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE, Uri.fromFile(file)));
         return true;
+    }
+
+    public static String intToIp(int i) {
+        return (i & 0xFF) + "." + ((i >> 8) & 0xFF) + "." + ((i >> 16) & 0xFF) + "." + (i >> 24 & 0xFF);
     }
 
 }
