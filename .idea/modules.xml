@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/RTVideoTcpClient/RealTimeVideoTcp.iml" filepath="$PROJECT_DIR$/RTVideoTcpClient/RealTimeVideoTcp.iml" />
+      <module fileurl="file://$PROJECT_DIR$/RTVideoTcpServer/RTVideoTcpServer.iml" filepath="$PROJECT_DIR$/RTVideoTcpServer/RTVideoTcpServer.iml" />
+      <module fileurl="file://$PROJECT_DIR$/RealTimeStreaming.iml" filepath="$PROJECT_DIR$/RealTimeStreaming.iml" />
+      <module fileurl="file://$PROJECT_DIR$/RealTimeVideo/RealTimeVideo.iml" filepath="$PROJECT_DIR$/RealTimeVideo/RealTimeVideo.iml" />
+      <module fileurl="file://$PROJECT_DIR$/RealTimeVideoSer/RealTimeVideoSer.iml" filepath="$PROJECT_DIR$/RealTimeVideoSer/RealTimeVideoSer.iml" />
+    </modules>
+  </component>
+</project>
