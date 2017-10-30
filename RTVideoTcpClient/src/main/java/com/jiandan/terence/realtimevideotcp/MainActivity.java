@@ -28,6 +28,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.List;
 
 import static com.jiandan.terence.realtimevideotcp.TlvBox.IMAGE;
 
@@ -57,7 +58,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         mSurfaceView = findViewById(R.id.surface_view);
         mHolder = mSurfaceView.getHolder();
-        mHolder.setFixedSize(200, 200);
+        //mHolder.setFixedSize(200, 200);
         mHolder.addCallback(MainActivity.this);
         mConnectButton = findViewById(R.id.btn_connect);
         mEtAddress = findViewById(R.id.et_address);
@@ -65,7 +66,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
             @Override
             public void onClick(View v) {
                 mIp = mEtAddress.getText().toString();
-                isRun=true;
+                isRun = true;
                 mSurfaceView.setVisibility(View.VISIBLE);
             }
         });
@@ -86,8 +87,14 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
             mParametars.setSceneMode(Camera.Parameters.SCENE_MODE_AUTO);
             mParametars.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
             mParametars.setPreviewFormat(ImageFormat.NV21);
+            List<Camera.Size> sizeList = mParametars.getSupportedPreviewSizes();
+            for (Camera.Size size : sizeList) {
+                Log.d(TAG, "height =" + size.height + "width =" + size.width);
+            }
             mParametars.setPictureSize(mCamWidth, mCamHeight);
             mParametars.setPreviewSize(mCamWidth, mCamHeight);
+            Log.d(TAG, "Preview height =" + mParametars.getPreviewSize().height + "Preview width =" + mParametars.getPreviewSize().width);
+
             mParametars.setPreviewFpsRange(13, 15);
             mCamera.autoFocus(null);
             setCameraDisplay(mCamera);
@@ -161,18 +168,21 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
             mCamera = null;
         }
     }
-    int count=0;
+
+    int count = 0;
+
     @Override
     public void onPreviewFrame(byte[] bytes, Camera camera) {
         Camera.Parameters parameters = camera.getParameters();
         int format = parameters.getPreviewFormat();
         int width = parameters.getPreviewSize().width;
         int height = parameters.getPreviewSize().height;
+        Log.d(TAG, "onPreviewFrame height =" +height + "width =" + width);
         YuvImage yuvImage = new YuvImage(bytes, ImageFormat.NV21, width, height, null);
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         yuvImage.compressToJpeg(new Rect(0, 0, width, height), 20, outputStream);
         byte[] imageData = outputStream.toByteArray();
-        if(count%5==0){
+        if (count % 5 == 0) {
             sendVideo(imageData);
         }
         count++;
@@ -187,7 +197,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
      */
     private void sendVideo(final byte[] imageData) {
         Log.d(TAG, "sending video");
-        Log.d(TAG, "is run ="+(isRun));
+        Log.d(TAG, "is run =" + (isRun));
         TlvBox tlvBox = new TlvBox();
         tlvBox.putBytesValue(IMAGE, imageData);
         final byte[] serialize = tlvBox.serialize();
@@ -195,25 +205,24 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         ExecutorManager.getExecutor().execute(new Runnable() {
             @Override
             public void run() {
-                if (isRun) {
-                    try {
-                        long start = System.currentTimeMillis();
-                        // 将图像数据通过Socket发送出去
-                        byte[] data = serialize;
-                        Socket socket = new Socket();
-                        socket.connect(new InetSocketAddress(mIp, 3000));
-                        OutputStream outputStream = socket.getOutputStream();
-                        outputStream.write(data);
-                        outputStream.flush();
-                        outputStream.close();
-                        socket.close();
-                        Log.d(TAG, "send size = " + data.length);
-                        Log.d(TAG, "send cost time =" + (System.currentTimeMillis() - start));
-                    } catch (IOException e) {
-                        System.out.println("onPreviewFrame.Thread===" + e);
-                    }
+                try {
+                    long start = System.currentTimeMillis();
+                    // 将图像数据通过Socket发送出去
+                    byte[] data = serialize;
+                    Socket socket = new Socket();
+                    socket.connect(new InetSocketAddress(mIp, 3000));
+                    OutputStream outputStream = socket.getOutputStream();
+                    outputStream.write(data);
+                    outputStream.flush();
+                    outputStream.close();
+                    socket.close();
+                    Log.d(TAG, "send size = " + data.length);
+                    Log.d(TAG, "send cost time =" + (System.currentTimeMillis() - start));
+                } catch (IOException e) {
+                    System.out.println("onPreviewFrame.Thread===" + e);
                 }
             }
+
         });
 
     }
