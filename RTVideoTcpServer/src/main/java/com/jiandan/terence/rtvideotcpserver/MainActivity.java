@@ -41,6 +41,7 @@ public class MainActivity extends AppCompatActivity {
         String ip = Util.intToIp(ipAddress);
         setTitle("服务端IP：" + ip);
        //开启socket 监听
+
        new Thread(new Runnable() {
            @Override
            public void run() {
@@ -51,14 +52,16 @@ public class MainActivity extends AppCompatActivity {
                        }
                        Log.d(TAG,"i am listening");
                        Socket socket = mServerSocket.accept();
-                       new Thread(new ReceiveDataRunnable(socket)).start();
+                       ExecutorManager.getExecutor().execute(new ReceiveDataRunnable(socket));
+                      // new Thread().start();
+                       Log.d(TAG,"spawn a runnable");
                    } catch (IOException e) {
                        e.printStackTrace();
                    }
 
                }
            }
-       });
+       }).start();
 
     }
 
@@ -66,15 +69,15 @@ public class MainActivity extends AppCompatActivity {
 
         Socket mSocket;
 
-        public ReceiveDataRunnable(Socket mSocket) {
-            this.mSocket = mSocket;
+        public ReceiveDataRunnable(Socket socket) {
+            this.mSocket = socket;
         }
 
         @Override
         public void run() {
             try {
-                Socket socket=mServerSocket.accept();
-                InputStream inputStream=socket.getInputStream();
+                //Socket socket=mServerSocket.accept();
+                InputStream inputStream=mSocket.getInputStream();
                 long start = System.currentTimeMillis();
                 int headerLength = 12;
                 byte[] contentInfo = new byte[headerLength];
@@ -108,6 +111,8 @@ public class MainActivity extends AppCompatActivity {
                 byte[] imageBytes = parsedBox.getBytesValue(IMAGE);
                final Bitmap bm = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.length);
                 Log.d(TAG, "decode cost time ="+(System.currentTimeMillis()-start1));
+                inputStream.close();
+                mSocket.close();
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {

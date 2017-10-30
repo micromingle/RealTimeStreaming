@@ -19,7 +19,7 @@
         android:minWidth="100dp"
         android:gravity="center"
         android:layout_marginLeft="15dp"
-        android:text="10.10.201.254"
+        android:text="10.10.102.135"
         android:id="@+id/et_address"/>
     <Button
         android:layout_width="wrap_content"

@@ -161,7 +161,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
             mCamera = null;
         }
     }
-
+    int count=0;
     @Override
     public void onPreviewFrame(byte[] bytes, Camera camera) {
         Camera.Parameters parameters = camera.getParameters();
@@ -172,7 +172,11 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         yuvImage.compressToJpeg(new Rect(0, 0, width, height), 20, outputStream);
         byte[] imageData = outputStream.toByteArray();
-        sendVideo(imageData);
+        if(count%5==0){
+            sendVideo(imageData);
+        }
+        count++;
+
 
     }
 
@@ -182,12 +186,13 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
      * @param imageData
      */
     private void sendVideo(final byte[] imageData) {
-
+        Log.d(TAG, "sending video");
+        Log.d(TAG, "is run ="+(isRun));
         TlvBox tlvBox = new TlvBox();
         tlvBox.putBytesValue(IMAGE, imageData);
         final byte[] serialize = tlvBox.serialize();
         // 启用线程将图像数据发送出去
-        new Thread(new Runnable() {
+        ExecutorManager.getExecutor().execute(new Runnable() {
             @Override
             public void run() {
                 if (isRun) {
@@ -209,6 +214,7 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
                     }
                 }
             }
-        }).start();
+        });
+
     }
 }
