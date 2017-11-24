@@ -51,7 +51,9 @@ public class MainActivity extends AppCompatActivity {
                            mServerSocket = new ServerSocket(3000);
                        }
                        Log.d(TAG,"i am listening");
+                       long start=System.currentTimeMillis();
                        Socket socket = mServerSocket.accept();
+                       Log.d(TAG,"build socket cost ="+(System.currentTimeMillis()-start));
                        ExecutorManager.getExecutor().execute(new ReceiveDataRunnable(socket));
                       // new Thread().start();
                        Log.d(TAG,"spawn a runnable");
@@ -77,8 +79,8 @@ public class MainActivity extends AppCompatActivity {
         public void run() {
             try {
                 //Socket socket=mServerSocket.accept();
-                InputStream inputStream=mSocket.getInputStream();
                 long start = System.currentTimeMillis();
+                InputStream inputStream=mSocket.getInputStream();
                 int headerLength = 12;
                 byte[] contentInfo = new byte[headerLength];
                 inputStream.read(contentInfo);
@@ -102,15 +104,19 @@ public class MainActivity extends AppCompatActivity {
                 }
                 final byte[] allData = new byte[totalSize];
                 Log.d(TAG, "reading data");
+                long startArrayCoppy=System.currentTimeMillis();
                 System.arraycopy(contentInfo, 0, allData, 0, contentInfo.length);
                 System.arraycopy(buffer, 0, allData, headerLength, buffer.length);
+                Log.d(TAG, "copy cost time="+(System.currentTimeMillis()-startArrayCoppy));
                 byte[] rawdata=allData;
                 Log.d(TAG, "receive len=" + rawdata.length);
                 long start1=System.currentTimeMillis();
                 TlvBox parsedBox = TlvBox.parse(rawdata,0, rawdata.length);
                 byte[] imageBytes = parsedBox.getBytesValue(IMAGE);
+                Log.d(TAG, "parse cost time ="+(System.currentTimeMillis()-start1));
                final Bitmap bm = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.length);
                 Log.d(TAG, "decode cost time ="+(System.currentTimeMillis()-start1));
+                Log.d(TAG, "all cost time ="+(System.currentTimeMillis()-start));
                 inputStream.close();
                 mSocket.close();
                 runOnUiThread(new Runnable() {

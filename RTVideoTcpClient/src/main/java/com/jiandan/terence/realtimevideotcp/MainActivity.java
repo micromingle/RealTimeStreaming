@@ -180,9 +180,9 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         Log.d(TAG, "onPreviewFrame height =" +height + "width =" + width);
         YuvImage yuvImage = new YuvImage(bytes, ImageFormat.NV21, width, height, null);
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        yuvImage.compressToJpeg(new Rect(0, 0, width, height), 20, outputStream);
+        yuvImage.compressToJpeg(new Rect(0, 0, width, height), 10, outputStream);
         byte[] imageData = outputStream.toByteArray();
-        if (count % 5 == 0) {
+        if (count % 1 == 0) {
             sendVideo(imageData);
         }
         count++;

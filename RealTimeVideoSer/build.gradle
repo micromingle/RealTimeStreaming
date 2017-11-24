@@ -4,6 +4,15 @@ android {
     compileSdkVersion 22
     buildToolsVersion "25.0.0"
 
+    signingConfigs {
+        config {
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+            storeFile file('launcher_slave.keystore')
+            storePassword '131890'
+        }
+    }
+
     defaultConfig {
         applicationId "com.example.realtimevideoser"
         minSdkVersion 8
@@ -14,6 +23,10 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.txt'
+        }
+
+        debug {
+            signingConfig signingConfigs.config
         }
     }
 }

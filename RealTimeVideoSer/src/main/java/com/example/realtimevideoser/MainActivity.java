@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -19,6 +21,8 @@ import android.media.AudioTrack;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceHolder.Callback;
@@ -36,7 +40,17 @@ public class MainActivity extends Activity implements Callback {
 	ReceiveSoundsThread rst = new ReceiveSoundsThread();
 	private SurfaceHolder holder;
 	private String TAG="MainActivity3";
-
+	private Handler mHandler =new Handler(){
+        @Override
+        public void handleMessage(Message msg) {
+            tv.setText((String)msg.obj);
+            Log.d(TAG,"setting text");
+            super.handleMessage(msg);
+        }
+    };
+    public static String getPackedId(byte[] b) {
+        return ByteBuffer.wrap(b, 0, 4).order(ByteOrder.LITTLE_ENDIAN).getInt() + "";
+    }
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -59,45 +73,56 @@ public class MainActivity extends Activity implements Callback {
 		// holder.addCallback(this);
 		try {
 			mSocket = new DatagramSocket(AppConfig.VPort);
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    while (true) {
+                        try {
+                            long start=System.currentTimeMillis();
+                            int bufferSize=mCamWidth * mCamHeight * 3 / 2;
+                            //bufferSize=10000;
+                            byte[] message = new byte[bufferSize];
+                            Log.d(TAG,"receive buffer size = " +message.length);
+                            DatagramPacket datagramPacket = new DatagramPacket(message, message.length);
+                            mSocket.receive(datagramPacket);
+                            byte[] bytes = datagramPacket.getData();
+                            byte[] data = new byte[message.length - 4];
+                            final byte[] packetId = new byte[4];//包的标识id
+                            System.arraycopy(bytes, 0, packetId, 0, packetId.length);
+                            System.arraycopy(bytes, packetId.length, data, 0, data.length);
+
+
+                            Log.d(TAG,"receive size = " +bytes.length);
+                            Log.d(TAG,"receive cost time ="+(System.currentTimeMillis()-start));
+                            if (bytes.length > 0) {
+                                final Bitmap bm = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
+                                // Matrix matrix=new Matrix();
+                                // matrix.postRotate(-90);
+                                // // 重新绘制Bitmap
+                                // final Bitmap bitmap = Bitmap.createBitmap(bm, 0,
+                                // 0, bm.getWidth(),bm.getHeight(), matrix, true);
+//                                Message message1=mHandler.obtainMessage(0,getPackedId(packetId));
+//                                message1.sendToTarget();
+                                runOnUiThread(new Runnable() {
+                                    @SuppressLint("NewApi")
+                                    public void run() {
+                                        tv.setText(getPackedId(packetId));
+                                        Log.d(TAG,"setting text");
+                                    }
+                                });
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }).start();
 		} catch (SocketException e) {
 			e.printStackTrace();
 		}
-		rst.start();
-		rst.setRunning(true);
-		new Thread(new Runnable() {
-			@Override
-			public void run() {
-				while (true) {
-					try {
-						long start=System.currentTimeMillis();
-						int bufferSize=mCamWidth * mCamHeight * 3 / 2;
-						//bufferSize=10000;
-						byte[] message = new byte[bufferSize];
-						Log.d(TAG,"receive buffer size = " +message.length);
-						DatagramPacket datagramPacket = new DatagramPacket(message, message.length);
-						mSocket.receive(datagramPacket);
-						byte[] bytes = datagramPacket.getData();
-						Log.d(TAG,"receive size = " +bytes.length);
-						Log.d(TAG,"receive cost time ="+(System.currentTimeMillis()-start));
-						if (bytes.length > 0) {
-							final Bitmap bm = BitmapFactory.decodeByteArray(bytes, 0, bytes.length);
-							// Matrix matrix=new Matrix();
-							// matrix.postRotate(-90);
-							// // 重新绘制Bitmap
-							// final Bitmap bitmap = Bitmap.createBitmap(bm, 0,
-							// 0, bm.getWidth(),bm.getHeight(), matrix, true);
-							runOnUiThread(new Runnable() {
-								@SuppressLint("NewApi")
-								public void run() {
-									tv.setBackground(new BitmapDrawable(getResources(), bm));
-								}
-							});
-						}
-					} catch (Exception e) {
-					}
-				}
-			}
-		}).start();
+		//rst.start();
+		//rst.setRunning(true);
+
 	}
 
 	private String intToIp(int i) {

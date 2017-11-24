@@ -7,6 +7,8 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 
 import android.R.layout;
 import android.annotation.SuppressLint;
@@ -191,7 +193,7 @@ public class MainActivity extends Activity implements Callback, PreviewCallback 
 	int count=0;
 	@Override
 	public void onPreviewFrame(byte[] data, Camera paramCamera) {
-        if(count%4==0) {
+      //  if(count%4==0) {
             Size size = paramCamera.getParameters().getPreviewSize();
             long start=System.currentTimeMillis();
             try {
@@ -209,10 +211,13 @@ public class MainActivity extends Activity implements Callback, PreviewCallback 
                 System.out.println("onPreviewFrame===" + ex);
                 mSocket.close();
             }
-        }
+      //  }
         count++;
 	}
-
+	private byte[] createPackedId(int id) {
+		byte[] packId = ByteBuffer.allocate(4).order(ByteOrder.LITTLE_ENDIAN).putInt(id).array();
+		return packId;
+	}
 	/**
 	 * 发送视频
 	 * 
@@ -226,9 +231,16 @@ public class MainActivity extends Activity implements Callback, PreviewCallback 
 				if (isRun) {
 					try {
                         long start=System.currentTimeMillis();
-                        // 将图像数据通过Socket发送出去
+						// 将图像数据通过Socket发送出去
 						byte[] data = outstream.toByteArray();
-						DatagramPacket packet = new DatagramPacket(data, data.length, InetAddress.getByName(ipname),
+						byte[] packetArray = new byte[data.length + 4];
+						byte[] packedId = createPackedId(count);//包的标识id
+
+						System.arraycopy(packedId, 0, packetArray, 0, packedId.length);
+						System.arraycopy(data, 0, packetArray, packedId.length, data.length);
+                        // 将图像数据通过Socket发送出去
+						//byte[] data = outstream.toByteArray();
+						DatagramPacket packet = new DatagramPacket(packetArray, packetArray.length, InetAddress.getByName(ipname),
 								mPort);
 						mSocket.send(packet);
                         Log.d(TAG,"send size = " +data.length);
