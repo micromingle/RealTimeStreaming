@@ -1,42 +1,43 @@
 package com.jiandan.terence.realtimevideotcp;
 
-import android.app.AlertDialog;
-import android.content.DialogInterface;
+import android.app.ActivityManager;
+import android.content.Context;
+import android.content.pm.ConfigurationInfo;
 import android.graphics.ImageFormat;
 import android.graphics.Rect;
+import android.graphics.SurfaceTexture;
 import android.graphics.YuvImage;
 import android.hardware.Camera;
-import android.support.v7.app.AppCompatActivity;
+import android.opengl.GLSurfaceView;
 import android.os.Bundle;
+import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
-import android.view.LayoutInflater;
 import android.view.Surface;
 import android.view.SurfaceHolder;
-import android.view.SurfaceView;
+import android.view.TextureView;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.Toast;
+
+import com.jiandan.terence.realtimevideotcp.csdn.GLFrameRenderer;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.SocketException;
 import java.util.List;
 
 import static com.jiandan.terence.realtimevideotcp.TlvBox.IMAGE;
 
-public class MainActivity extends AppCompatActivity implements SurfaceHolder.Callback, Camera.PreviewCallback {
+public class MainActivity extends AppCompatActivity implements Camera.PreviewCallback,
+        TextureView.SurfaceTextureListener {
     private Camera mCamera;
     private Camera.Parameters mParametars;
     private int mCamWidth = 512;
-    private int mCamHeight = 384;
+    private int mCamHeight = 512;
+
     protected String ipname;
     protected int mPort = 1234;//= AppConfig.VPort;
     private boolean isPreview = false;
@@ -45,21 +46,35 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
     //   SendSoundsThread sst;
     private EditText mEtAddress;
     private Socket mSocket;
-    private SurfaceView mSurfaceView;
+    private TextureView mSurfaceView;
     protected boolean isRun = false;
     private String TAG = "MainActivity4";
     Button mConnectButton;
     private String mIp;
-
+    private GLSurfaceView mGLSurfaceView;
+    //MyRenderer mRender;
+   // GLRender2 mRender;
+    GLFrameRenderer mRender;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        setContentView(R.layout.activity_main);
         mSurfaceView = findViewById(R.id.surface_view);
-        mHolder = mSurfaceView.getHolder();
+        mSurfaceView.setSurfaceTextureListener(this);
+        mGLSurfaceView = findViewById(R.id.my_gl_surface_view);
+       // mRender = new MyRenderer(this);
+        mRender = new GLFrameRenderer(null,mGLSurfaceView,getResources().getDisplayMetrics());
+        mGLSurfaceView.setRenderer(mRender);
+        mRender.update(mCamWidth,mCamHeight);
+        //mGLSurfaceView.setRenderMode(RENDERMODE_WHEN_DIRTY);
+        // mHolder = mSurfaceView.getHolder();
+        // mHolder.setFormat(PixelFormat.TRANSPARENT);
+//surfceview放置在顶层，即始终位于最上层
+        //mSurfaceView.setZOrderOnTop(true);
         //mHolder.setFixedSize(200, 200);
-        mHolder.addCallback(MainActivity.this);
+        // mHolder.addCallback(MainActivity.this);
         mConnectButton = findViewById(R.id.btn_connect);
         mEtAddress = findViewById(R.id.et_address);
         mConnectButton.setOnClickListener(new View.OnClickListener() {
@@ -70,8 +85,19 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
                 mSurfaceView.setVisibility(View.VISIBLE);
             }
         });
+        if (hasGLES20()) {
+            Log.d(TAG, "支持gles");
+        } else {
+            Log.d(TAG, "不支持gles");
+        }
     }
 
+    private boolean hasGLES20() {
+        ActivityManager am = (ActivityManager)
+                getSystemService(Context.ACTIVITY_SERVICE);
+        ConfigurationInfo info = am.getDeviceConfigurationInfo();
+        return info.reqGlEsVersion >= 0x20000;
+    }
 
     /**
      * 初始化相机
@@ -86,12 +112,16 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
             mParametars.setWhiteBalance(Camera.Parameters.WHITE_BALANCE_AUTO);
             mParametars.setSceneMode(Camera.Parameters.SCENE_MODE_AUTO);
             mParametars.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
-            mParametars.setPreviewFormat(ImageFormat.NV21);
-            List<Camera.Size> sizeList = mParametars.getSupportedPreviewSizes();
-            for (Camera.Size size : sizeList) {
-                Log.d(TAG, "height =" + size.height + "width =" + size.width);
+            mParametars.setPreviewFormat(ImageFormat.YV12);
+            //mParametars.setPreviewSize(480,800);
+//            List<Camera.Size> sizeList = mParametars.getSupportedPreviewSizes();
+//            for (Camera.Size size : sizeList) {
+//                Log.d(TAG, "Camera height =" + size.height + "Camerawidth =" + size.width);
+//            }
+            for(Camera.Size size:mParametars.getSupportedPreviewSizes()){
+                Log.d(TAG, "Supported height =" + size.height + "Supported width =" + size.width);
             }
-            mParametars.setPictureSize(mCamWidth, mCamHeight);
+           // mParametars.setPictureSize(mCamWidth, mCamHeight);
             mParametars.setPreviewSize(mCamWidth, mCamHeight);
             Log.d(TAG, "Preview height =" + mParametars.getPreviewSize().height + "Preview width =" + mParametars.getPreviewSize().width);
 
@@ -140,44 +170,20 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
         camera.setDisplayOrientation(result);
     }
 
-    @Override
-    public void surfaceCreated(SurfaceHolder arg0) {
-        initCamera();
-        // sst.setRunning(true);
-        Log.d(TAG, "surfaceCreated");
-    }
-
-    @Override
-    public void surfaceChanged(SurfaceHolder holder, int arg1, int arg2, int arg3) {
-        try {
-            mCamera.setPreviewDisplay(holder);
-            mCamera.startPreview();
-            Log.d(TAG, "surfaceChanged");
-        } catch (IOException e) {
-            System.out.println("surfaceChanged===" + e);
-        }
-    }
-
-    @Override
-    public void surfaceDestroyed(SurfaceHolder holder) {
-        Log.d(TAG, "surfaceDestroyed");
-        if (mCamera != null) {
-            mCamera.setPreviewCallback(null);
-            mCamera.stopPreview();
-            mCamera.release();
-            mCamera = null;
-        }
-    }
 
     int count = 0;
 
     @Override
     public void onPreviewFrame(byte[] bytes, Camera camera) {
+        mRender.update(bytes);
+        if (mGLSurfaceView != null) {
+            mGLSurfaceView.requestRender();
+        }
         Camera.Parameters parameters = camera.getParameters();
         int format = parameters.getPreviewFormat();
         int width = parameters.getPreviewSize().width;
         int height = parameters.getPreviewSize().height;
-        Log.d(TAG, "onPreviewFrame height =" +height + "width =" + width);
+        Log.d(TAG, "onPreviewFrame height =" + height + "width =" + width);
         YuvImage yuvImage = new YuvImage(bytes, ImageFormat.NV21, width, height, null);
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         yuvImage.compressToJpeg(new Rect(0, 0, width, height), 10, outputStream);
@@ -224,6 +230,38 @@ public class MainActivity extends AppCompatActivity implements SurfaceHolder.Cal
             }
 
         });
+
+    }
+
+    @Override
+    public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
+        initCamera();
+        try {
+            mCamera.setPreviewTexture(surface);
+            mCamera.startPreview();
+        } catch (Exception ioe) {
+            // Something bad happened
+        }
+    }
+
+    @Override
+    public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
+
+    }
+
+    @Override
+    public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
+        if (mCamera != null) {
+            mCamera.setPreviewCallback(null);
+            mCamera.stopPreview();
+            mCamera.release();
+            mCamera = null;
+        }
+        return false;
+    }
+
+    @Override
+    public void onSurfaceTextureUpdated(SurfaceTexture surface) {
 
     }
 }
