@@ -1,4 +1,4 @@
-//package com.jiandan.terence.realtimevideotcp;
+package com.jiandan.terence.realtimevideotcp;//package com.jiandan.terence.realtimevideotcp;
 //
 //import android.opengl.EGLConfig;
 //import android.opengl.GLES20;

@@ -22,7 +22,7 @@ import javax.microedition.khronos.opengles.GL10;
 
 public class MyRenderer implements GLSurfaceView.Renderer {
 
-    private static String TAG = "MyRenderer";
+    private static String TAG = "LastRenderer";
     private int[] yuvTextures = {-1, -1, -1};
     String fragmentShader =
             "#ifdef GL_ES\n" +
@@ -68,7 +68,7 @@ public class MyRenderer implements GLSurfaceView.Renderer {
                     "   v_texCoord = a_texCoord;                        \n" +
                     "}                                                  \n";
     public static final int recWidth = 512;
-    public static final int recHeight = 512;
+    public static final int recHeight = 384;
 
     private static final int U_INDEX = recWidth * recHeight;
     private static final int V_INDEX = recWidth * recHeight * 5 / 4;
@@ -94,8 +94,10 @@ public class MyRenderer implements GLSurfaceView.Renderer {
     private int yTexture;
     private int uTexture;
     private int vTexture;
+    private boolean isStarted = false;
 
-    private final float[] mVerticesData = {-1.f, 1.f, 0.0f, // Position 0
+    private final float[] mVerticesData = {
+            -1.f, 1.f, 0.0f, // Position 0
             0.0f, 0.0f, // TexCoord 0
             -1.f, -1.f, 0.0f, // Position 1
             0.0f, 1.0f, // TexCoord 1
@@ -104,6 +106,17 @@ public class MyRenderer implements GLSurfaceView.Renderer {
             1.f, 1.f, 0.0f, // Position 3
             1.0f, 0.0f // TexCoord 3
     };
+
+    //	private final float[] verticesData = {
+//			-1.f, 1.f, // Position 0
+//			0.0f, 0.0f, // TexCoord 0
+//			-1.f, -1.f, // Position 1
+//			0.0f, 1.0f, // TexCoord 1
+//			1.f, -1.f, // Position 2
+//			1.0f, 1.0f, // TexCoord 2
+//			1.f, 1.f, // Position 3
+//			1.0f, 0.0f // TexCoord 3
+//	};
     private final short[] mIndicesData = {0, 1, 2, 0, 2, 3};
 
     private ByteBuffer yBuffer;
@@ -136,6 +149,7 @@ public class MyRenderer implements GLSurfaceView.Renderer {
     }
 
     public void setYuvData(byte[] data) {
+     //   isStarted = true;
         System.arraycopy(data, 0, ydata, 0, LENGTH);
         yBuffer.put(ydata);
         yBuffer.position(0);
@@ -152,7 +166,7 @@ public class MyRenderer implements GLSurfaceView.Renderer {
 
     @Override
     public void onSurfaceChanged(GL10 gl, int width, int height) {
-        // GLES20.glActiveTexture(GLES20.GL_ACTIVE_TEXTURE);
+       //  GLES20.glActiveTexture(GLES20.GL_TEXTURE2);
         GLES20.glViewport(0, 0, width, height);
     }
 
@@ -168,7 +182,7 @@ public class MyRenderer implements GLSurfaceView.Renderer {
 //
 //        GLES20.glGenFramebuffers(1, frameBuffer);
 //        GLES20.glGenRenderbuffers(1, renderBuffer);
-//        //GLES20.glActiveTexture(GLES20.GL_ACTIVE_TEXTURE);
+//      //  GLES20.glActiveTexture(GLES20.GL_ACTIVE_TEXTURE);
 //        //glGetIntegerv(GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS, ...)
 //        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, frameBuffer.get(0));
 //        GLES20.glClear(0);
@@ -187,32 +201,23 @@ public class MyRenderer implements GLSurfaceView.Renderer {
 //        }
 //        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
 //        GLES20.glClear(0);
-        GLES20.glEnable(GLES20.GL_DEPTH_TEST);
+//        checkNoGLES2Error();
+        //   GLES20.glEnable(GLES20.GL_DEPTH_TEST);
         mProgramObject = loadProgram(vShaderStr, fShaderStr);
 
         // Get the attribute locations
         mPositionLoc = GLES20.glGetAttribLocation(mProgramObject, "a_position");
+        checkNoGLES2Error("glGetAttribLocation");
         mTexCoordLoc = GLES20.glGetAttribLocation(mProgramObject, "a_texCoord");
-
-        // Load the vertex position
-        mVertices.position(0);
-        GLES20.glVertexAttribPointer(mPositionLoc, 3, GLES20.GL_FLOAT, false, 5 * 4, mVertices);
-        // Load the texture coordinate
-        mVertices.position(3);
-        GLES20.glVertexAttribPointer(mTexCoordLoc, 2, GLES20.GL_FLOAT, false, 5 * 4, mVertices);
-
-        GLES20.glEnableVertexAttribArray(mPositionLoc);
-        GLES20.glEnableVertexAttribArray(mTexCoordLoc);
-
-        createTextures(mProgramObject);
-        //int ytexture =GLES20.glGetUniformLocation(mProgramObject, "y_texture");
-        //GLES20.glUniform1i(ytexture, 0);
-       // GLES20.glUniform1i(GLES20.glGetUniformLocation(mProgramObject, "u_texture"), 1);
-       // GLES20.glUniform1i(GLES20.glGetUniformLocation(mProgramObject, "v_texture"), 2);
-        checkNoGLES2Error();
+        checkNoGLES2Error("glGetAttribLocation");
+        // Generate 3 texture ids for Y/U/V and place them into |textures|.
+        GLES20.glGenTextures(yuvTextures.length, yuvTextures, 0);
+        Log.d(TAG, "  texture=" + Arrays.toString(yuvTextures));
+        checkNoGLES2Error("glGenTextures");
+        //  checkNoGLES2Error();
         // Use the program object
-        GLES20.glUseProgram(mProgramObject);
-        checkNoGLES2Error();
+        //  GLES20.glUseProgram(mProgramObject);
+        // checkNoGLES2Error();
         GLES20.glClearColor(1.0f, 0.0f, 0.0f, 0.0f);
         checkNoGLES2Error();
     }
@@ -341,34 +346,85 @@ public class MyRenderer implements GLSurfaceView.Renderer {
 
     @Override
     public final void onDrawFrame(GL10 gl) {
+     //   if (!isStarted) return;
         Log.d(TAG, "on Draw frame");
         // Clear the color buffer
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT);
 
+        GLES20.glUseProgram(mProgramObject);
+        checkNoGLES2Error("glUseProgram");
+        // Load the vertex position
+        mVertices.position(0);
+        GLES20.glVertexAttribPointer(mPositionLoc, 3, GLES20.GL_FLOAT, false, 4 * 5, mVertices);
+        // Load the texture coordinate
+        mVertices.position(3);
+        GLES20.glVertexAttribPointer(mTexCoordLoc, 2, GLES20.GL_FLOAT, false, 4 * 5, mVertices);
 
-        composeData();
+        GLES20.glEnableVertexAttribArray(mPositionLoc);
+        GLES20.glEnableVertexAttribArray(mTexCoordLoc);
+        createTextures(mProgramObject);
+//        composeData();
         GLES20.glDrawElements(GLES20.GL_TRIANGLES, 6, GLES20.GL_UNSIGNED_SHORT, mIndices);
     }
+    // private boolean isChanged=false;
 
     private void createTextures(int program) {
         Log.d(TAG, "  YuvImageRenderer.createTextures");
         // this.program = program;
+        //   GLES20.glActiveTexture(GLES20.GL_TEXTURE2);
+        checkNoGLES2Error("glActiveTexture");
+        for (int i = 0; i < yuvTextures.length; i++) {
+            int w = (i == 0) ? recWidth : recWidth / 2;
+            int h = (i == 0) ? recHeight : recHeight / 2;
+            Log.d(TAG, "  i =" + i);
+           // GLES20.glEnable(GLES20.GL_TEXTURE_2D);
+          //  checkNoGLES2Error();
+          //  GLES20.glActiveTexture(GLES20.GL_TEXTURE0+i);
+         //   checkNoGLES2Error();
 
-        // Generate 3 texture ids for Y/U/V and place them into |textures|.
-        GLES20.glGenTextures(3, yuvTextures, 0);
-        Log.d(TAG, "  texture="+ Arrays.toString(yuvTextures));
-        for (int i = 0; i < 3; i++) {
-            GLES20.glEnable(GLES20.GL_TEXTURE_2D);
-           // GLES20.glActiveTexture(GLES20.GL_TEXTURE0 + i);
-           // GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, yuvTextures[i]);
+            ByteBuffer data;
+            if (i == 0) {
+              //  ;   GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+                int ytexture = GLES20.glGetUniformLocation(mProgramObject, "y_texture");
+                checkNoGLES2Error();
+                GLES20.glUniform1i(ytexture, 0);
+                checkNoGLES2Error();
+                data = yBuffer;
+            } else if (i == 1) {
+              //  GLES20.glActiveTexture(GLES20.GL_TEXTURE1);
+                data = uBuffer;
+                GLES20.glUniform1i(GLES20.glGetUniformLocation(mProgramObject, "u_texture"), 1);
+                checkNoGLES2Error();
+            } else {
+                data = vBuffer;
+                GLES20.glUniform1i(GLES20.glGetUniformLocation(mProgramObject, "v_texture"), 2);
+                checkNoGLES2Error();
+            }
+            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, yuvTextures[i]);
+            checkNoGLES2Error();
+            Log.d(TAG, "data size =" + data.array().length);
+            if (!isStarted) {
+                GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_LUMINANCE,
+                        w, h, 0, GLES20.GL_LUMINANCE, GLES20.GL_UNSIGNED_BYTE,
+                        null);
+            } else {
+                GLES20.glTexSubImage2D(GLES20.GL_TEXTURE_2D, 0, 0, 0,
+                        w, h, GLES20.GL_LUMINANCE, GLES20.GL_UNSIGNED_BYTE,
+                        data);
+            }
+            checkNoGLES2Error("glTexImage2D");
             GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D,
                     GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR);
+            checkNoGLES2Error("glTexParameterf");
             GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D,
                     GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
+            checkNoGLES2Error("glTexParameterf");
             GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D,
                     GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE);
+            checkNoGLES2Error("glTexParameterf");
             GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D,
                     GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE);
+            checkNoGLES2Error("glTexParameterf");
         }
         checkNoGLES2Error();
     }
@@ -378,35 +434,6 @@ public class MyRenderer implements GLSurfaceView.Renderer {
         previewFrameWidth = realWidth;
     }
 
-    private void composeData() {
-        for (int i = 0; i < 3; ++i) {
-            int w = (i == 0) ? recWidth : recWidth / 2;
-            int h = (i == 0) ? recHeight : recHeight / 2;
-            GLES20.glActiveTexture(GLES20.GL_TEXTURE0 + i);
-            checkNoGLES2Error();
-            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, yuvTextures[i]);
-            checkNoGLES2Error();
-            ByteBuffer data;
-            if (i == 0) {
-                //int ytexture =GLES20.glGetUniformLocation(mProgramObject, "y_texture");
-               // GLES20.glUniform1i(ytexture, 0);
-                data = yBuffer;
-            } else if (i == 1) {
-                data = uBuffer;
-              //  GLES20.glUniform1i(GLES20.glGetUniformLocation(mProgramObject, "u_texture"), 1);
-            } else {
-                data = vBuffer;
-              //  GLES20.glUniform1i(GLES20.glGetUniformLocation(mProgramObject, "v_texture"), 2);
-            }
-
-            GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, 0,
-                    w, h,  0,GLES20.GL_LUMINANCE, GLES20.GL_UNSIGNED_BYTE,
-                    data);
-            checkNoGLES2Error();
-
-        }
-        checkNoGLES2Error();
-    }
 
     public static String readTextFileFromRawResource(final Context context, final int resourceId) {
         final InputStream inputStream = context.getResources().openRawResource(resourceId);
@@ -437,8 +464,13 @@ public class MyRenderer implements GLSurfaceView.Renderer {
 
     // Assert that no OpenGL ES 2.0 error has been raised.
     private static void checkNoGLES2Error() {
+        checkNoGLES2Error("");
+    }
+
+    // Assert that no OpenGL ES 2.0 error has been raised.
+    private static void checkNoGLES2Error(String op) {
         int error = GLES20.glGetError();
-        abortUnless(error == GLES20.GL_NO_ERROR, "GLES20 error: " + error);
+        abortUnless(error == GLES20.GL_NO_ERROR, "LastRenderer   GLES20 error: " + error + " op: " + op);
     }
 
     public static int loadShader(int type, String shaderSrc) {
@@ -462,6 +494,7 @@ public class MyRenderer implements GLSurfaceView.Renderer {
             GLES20.glDeleteShader(shader);
             return 0;
         }
+        checkNoGLES2Error("loadShader");
         return shader;
     }
 
@@ -485,20 +518,21 @@ public class MyRenderer implements GLSurfaceView.Renderer {
 
         // Create the program object
         programObject = GLES20.glCreateProgram();
-
+        checkNoGLES2Error("glCreateProgram");
         if (programObject == 0) {
             return 0;
         }
 
         GLES20.glAttachShader(programObject, vertexShader);
+        checkNoGLES2Error("glAttachShader");
         GLES20.glAttachShader(programObject, fragmentShader);
-
+        checkNoGLES2Error("glAttachShader");
         // Link the program
         GLES20.glLinkProgram(programObject);
-
+        checkNoGLES2Error("glLinkProgram");
         // Check the link status
         GLES20.glGetProgramiv(programObject, GLES20.GL_LINK_STATUS, linked, 0);
-
+        checkNoGLES2Error("glGetProgramiv");
         if (linked[0] == 0) {
             Log.e(TAG, "Error linking program:");
             Log.e(TAG, GLES20.glGetProgramInfoLog(programObject));
@@ -508,7 +542,9 @@ public class MyRenderer implements GLSurfaceView.Renderer {
 
         // Free up no longer needed shader resources
         GLES20.glDeleteShader(vertexShader);
+        checkNoGLES2Error("glDeleteShader");
         GLES20.glDeleteShader(fragmentShader);
+        checkNoGLES2Error("glDeleteShader");
         return programObject;
     }
 

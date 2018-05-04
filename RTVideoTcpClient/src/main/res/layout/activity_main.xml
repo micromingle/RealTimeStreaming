@@ -40,8 +40,8 @@
 
     <android.opengl.GLSurfaceView
         android:id="@+id/my_gl_surface_view"
-        android:background="@color/colorPrimary"
         android:layout_width="480px"
+        android:rotation="0"
         android:layout_height="800px"
         android:visibility="visible"/>
 

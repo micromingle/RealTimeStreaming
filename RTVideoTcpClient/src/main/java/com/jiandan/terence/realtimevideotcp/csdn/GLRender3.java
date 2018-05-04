@@ -1,4 +1,4 @@
-package com.jiandan.terence.realtimevideotcp;
+package com.jiandan.terence.realtimevideotcp.csdn;
 
 
 import android.app.Activity;
@@ -7,8 +7,9 @@ import android.hardware.Camera;
 import android.hardware.Camera.PreviewCallback;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView.Renderer;
-import android.opengl.Matrix;
 import android.util.Log;
+
+import com.jiandan.terence.realtimevideotcp.R;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -22,22 +23,23 @@ import java.nio.ShortBuffer;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
-public class GLRender2
+public class GLRender3
         implements Renderer, PreviewCallback {
     public static int mCamWidth = 1920;
     public static int mCamHeight = 1080;
     private static final int LENGTH = mCamWidth * mCamHeight;
     private static final int LENGTH_2 = mCamWidth * mCamHeight / 2;
-
+    private static final int U_INDEX = LENGTH;
+    private static final int V_INDEX = LENGTH * 5 / 4;
+    private static final int LENGTH_4 = LENGTH / 4;
     private Activity activity;
+    byte[] ydata = new byte[LENGTH];
+    byte[] uData = new byte[LENGTH_4];
+    byte[] vData = new byte[LENGTH_4];
 
     private FloatBuffer mVertices;
     private ShortBuffer mIndices;
-    private int muMVPMatrixHandle;
-    private float[] mMVPMatrix = new float[16];
-    private float[] mMMatrix = new float[16];
-    private float[] mVMatrix = new float[16];
-    private float[] mProjMatrix = new float[16];
+
     private int previewFrameWidth = 256;
     private int previewFrameHeight = 256;
     private int mProgramObject;
@@ -63,8 +65,9 @@ public class GLRender2
     private ByteBuffer frameData = null;
     private ByteBuffer yBuffer;
     private ByteBuffer uBuffer;
+    private ByteBuffer vBuffer;
 
-    public GLRender2(Activity activity) {
+    public GLRender3(Activity activity) {
         this.activity = activity;
 
         mVertices = ByteBuffer.allocateDirect(mVerticesData.length * 4)
@@ -76,7 +79,8 @@ public class GLRender2
         mIndices.put(mIndicesData).position(0);
 
         yBuffer = ByteBuffer.allocateDirect(LENGTH);
-        uBuffer = ByteBuffer.allocateDirect(LENGTH_2);
+        uBuffer = ByteBuffer.allocateDirect(LENGTH_4);
+        vBuffer = ByteBuffer.allocateDirect(LENGTH_4);
     }
 
     @Override
@@ -96,16 +100,41 @@ public class GLRender2
         GLES20.glEnableVertexAttribArray(mPositionLoc);
         GLES20.glEnableVertexAttribArray(mTexCoordLoc);
 
-       // Matrix.setIdentityM(mMMatrix, 0); // initialize to identity matrix
-        //Matrix.setRotateM(mMMatrix, 0, 0, 0, 0, 2.0f);
-        // Apply a ModelView Projection transformation
-        Matrix.multiplyMM(mMVPMatrix, 0, mProjMatrix, 0, mVMatrix, 0);
-       // Matrix.setRotateM(m, 0, mAngle, 0, 0, -1.0f);
-        GLES20.glUniformMatrix4fv(muMVPMatrixHandle, 1, false, mMVPMatrix, 0);
+
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE1);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, uTextureName);
+        GLES20.glUniform1i(uTexture, 1);
+        if (!isStart) {
+            GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_LUMINANCE_ALPHA,
+                    mCamWidth / 2, mCamHeight / 2, 0, GLES20.GL_LUMINANCE_ALPHA, GLES20.GL_UNSIGNED_BYTE, uBuffer);
+        } else {
+            GLES20.glTexSubImage2D(GLES20.GL_TEXTURE_2D, 0, 0, 0,
+                    mCamWidth / 2, mCamHeight / 2, GLES20.GL_LUMINANCE_ALPHA, GLES20.GL_UNSIGNED_BYTE, uBuffer);
+            checkNoGLES2Error();
+        }
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR);
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
+        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE);
+        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE);
+
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE2);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, vTextureName);
+        GLES20.glUniform1i(vTexture, 2);
+        if (!isStart) {
+            GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_LUMINANCE_ALPHA,
+                    mCamWidth / 2, mCamHeight / 2, 0, GLES20.GL_LUMINANCE_ALPHA, GLES20.GL_UNSIGNED_BYTE, vBuffer);
+        } else {
+            GLES20.glTexSubImage2D(GLES20.GL_TEXTURE_2D, 0, 0, 0,
+                    mCamWidth / 2, mCamHeight / 2, GLES20.GL_LUMINANCE_ALPHA, GLES20.GL_UNSIGNED_BYTE, vBuffer);
+            checkNoGLES2Error();
+        }
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR);
+        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
+        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE);
+        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE);
 
 
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
-        //GLES20.glActiveTexture(GLES20.GL_TEXTURE1);
         checkNoGLES2Error();
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, yTextureName);
         checkNoGLES2Error();
@@ -123,21 +152,7 @@ public class GLRender2
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE);
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE);
 
-        GLES20.glActiveTexture(GLES20.GL_TEXTURE1);
-        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, uTextureName);
-        GLES20.glUniform1i(uTexture, 1);
-        if (!isStart) {
-            GLES20.glTexImage2D(GLES20.GL_TEXTURE_2D, 0, GLES20.GL_LUMINANCE_ALPHA,
-                    mCamWidth / 2, mCamHeight / 2, 0, GLES20.GL_LUMINANCE_ALPHA, GLES20.GL_UNSIGNED_BYTE, uBuffer);
-        } else {
-            GLES20.glTexSubImage2D(GLES20.GL_TEXTURE_2D, 0, 0, 0,
-                    mCamWidth / 2, mCamHeight / 2, GLES20.GL_LUMINANCE_ALPHA, GLES20.GL_UNSIGNED_BYTE, yBuffer);
-            checkNoGLES2Error();
-        }
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR);
-        GLES20.glTexParameteri(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
-        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE);
-        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE);
+
 
         GLES20.glDrawElements(GLES20.GL_TRIANGLES, 6, GLES20.GL_UNSIGNED_SHORT, mIndices);
         //        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
@@ -148,13 +163,6 @@ public class GLRender2
     @Override
     public void onSurfaceChanged(GL10 gl, int width, int height) {
         GLES20.glViewport(0, 0, width, height);
-        float ratio = (float) width / height;
-
-       // Matrix.frustumM(mProjMatrix, 0, -ratio, ratio, -1, 1, 3, 7);
-        Matrix.frustumM(mProjMatrix, 0, -1, 1, -1, 1, 3, 7);
-        muMVPMatrixHandle = GLES20.glGetUniformLocation(mProgramObject, "uMVPMatrix");
-        Matrix.setLookAtM(mVMatrix, 0, 0, 0, 3f, 0.0f, 0f, 0f, -1f, 0.0f, 0.0f);
-        //Matrix.setLookAtM(mVMatrix, 0, 0, 0, -3, 0f, 0f, 0f, -1, 0.0f, 0.0f);
     }
 
     String vertexShader =
@@ -166,29 +174,15 @@ public class GLRender2
                     "   gl_Position = a_position;                       \n" +
                     "   v_texCoord = a_texCoord;                        \n" +
                     "}                                                  \n";
-
-    private final String vertexShaderCode =
-            // This matrix member variable provides a hook to manipulate
-            // the coordinates of the objects that use this vertex shader
-            "uniform mat4 uMVPMatrix;   \n" +
-                    "attribute vec2 a_texCoord;                         \n" +
-                    "varying vec2 v_texCoord;                           \n" +
-                    "attribute vec4 a_position;  \n" +
-                    "void main(){               \n" +
-
-                    // the matrix must be included as a modifier of gl_Position
-                    " gl_Position = uMVPMatrix * a_position; \n" +
-                    "   v_texCoord = a_texCoord;                        \n" +
-                    "}  \n";
     int yTextureName;
-    int uTextureName;
+    int uTextureName,vTextureName;
 
     @Override
     public void onSurfaceCreated(GL10 gl, EGLConfig config) {
 
         // Define a simple shader program for our point.
-        final String vShaderStr = vertexShaderCode;//vertexShader;
-        final String fShaderStr = readTextFileFromRawResource(activity, R.raw.convert2);
+        final String vShaderStr = vertexShader;
+        final String fShaderStr = readTextFileFromRawResource(activity, R.raw.f_convert);
 
         // Load the shaders and get a linked program object
         mProgramObject = loadProgram(vShaderStr, fShaderStr);
@@ -211,7 +205,7 @@ public class GLRender2
 
         //GLES20.glEnable(GLES20.GL_TEXTURE_2D);
 //        checkNoGLES2Error();
-        uTexture = GLES20.glGetUniformLocation(mProgramObject, "u_texture");
+        uTexture = GLES20.glGetUniformLocation(mProgramObject, "v_texture");
         checkNoGLES2Error();
         int[] uTextureNames = new int[1];
         GLES20.glGenTextures(1, uTextureNames, 0);
@@ -219,6 +213,12 @@ public class GLRender2
         uTextureName = uTextureNames[0];
         //  GLES20.glActiveTexture(GLES20.GL_TEXTURE1);
         //   GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, uTextureName);
+        vTexture = GLES20.glGetUniformLocation(mProgramObject, "u_texture");
+        checkNoGLES2Error();
+        int[] vTextureNames = new int[1];
+        GLES20.glGenTextures(1, vTextureNames, 0);
+        checkNoGLES2Error();
+        vTextureName = vTextureNames[0];
 
         // Set the background clear color to black.
         GLES20.glClearColor(1.0f, 0.0f, 0.0f, 0.0f);
@@ -326,14 +326,25 @@ public class GLRender2
     }
 
     public void setYuvData(byte[] data) {
-       // isStart = true;
-     //   yBuffer.clear();
-        yBuffer.put(data, 0, LENGTH);
-        yBuffer.position(0);
+       isStart = true;
+//        yBuffer.put(data, 0, LENGTH);
+//        yBuffer.position(0);
+//
+//        uBuffer.put(data, LENGTH, LENGTH / 2);
+//        uBuffer.position(0);
 
-     //   uBuffer.clear();
-        uBuffer.put(data, LENGTH, LENGTH / 2);
-        uBuffer.position(0);
+            //   isStarted = true;
+            System.arraycopy(data, 0, ydata, 0, LENGTH);
+            yBuffer.put(ydata);
+            yBuffer.position(0);
+
+            System.arraycopy(data, U_INDEX, uData, 0, LENGTH_4);
+            uBuffer.put(uData);
+            uBuffer.position(0);
+
+            System.arraycopy(data, V_INDEX, vData, 0, LENGTH_4);
+            vBuffer.put(vData);
+            vBuffer.position(0);
 
     }
 

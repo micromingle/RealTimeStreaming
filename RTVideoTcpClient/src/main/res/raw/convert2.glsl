@@ -1,5 +1,3 @@
-#version 120
-
 #ifdef GL_ES
 precision highp float;
 #endif
@@ -21,13 +19,14 @@ uniform sampler2D u_texture;
     //components of the texture respectively using GL_LUMINANCE_ALPHA.
     //Since U,V bytes are interspread in the texture, this is probably
     //the fastest way to use them in the shader
-    u = texture2D(u_texture, v_texCoord).a - 0.5;
-    v = texture2D(u_texture, v_texCoord).r - 0.5;
+    u = texture2D(u_texture, v_texCoord).r- 0.5;
+    v = texture2D(u_texture, v_texCoord).r- 0.5;
 
     //The numbers are just YUV to RGB conversion constants
     r = y + 1.13983*v;
     g = y - 0.39465*u - 0.58060*v;
     b = y + 2.03211*u;
+
 
     gl_FragColor = vec4(r,g,b,1.0);
 }

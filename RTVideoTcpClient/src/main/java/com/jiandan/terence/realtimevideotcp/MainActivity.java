@@ -21,6 +21,8 @@ import android.widget.Button;
 import android.widget.EditText;
 
 import com.jiandan.terence.realtimevideotcp.csdn.GLFrameRenderer;
+import com.jiandan.terence.realtimevideotcp.csdn.GLRender3;
+import com.jiandan.terence.realtimevideotcp.csdn.LastRenderer;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -29,14 +31,15 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.List;
 
+import static android.opengl.GLSurfaceView.RENDERMODE_WHEN_DIRTY;
 import static com.jiandan.terence.realtimevideotcp.TlvBox.IMAGE;
 
 public class MainActivity extends AppCompatActivity implements Camera.PreviewCallback,
         TextureView.SurfaceTextureListener {
     private Camera mCamera;
     private Camera.Parameters mParametars;
-    private int mCamWidth = 512;
-    private int mCamHeight = 512;
+    private int mCamWidth = GLRender2.mCamWidth;
+    private int mCamHeight = GLRender2.mCamHeight;
 
     protected String ipname;
     protected int mPort = 1234;//= AppConfig.VPort;
@@ -52,9 +55,9 @@ public class MainActivity extends AppCompatActivity implements Camera.PreviewCal
     Button mConnectButton;
     private String mIp;
     private GLSurfaceView mGLSurfaceView;
-    //MyRenderer mRender;
-   // GLRender2 mRender;
-    GLFrameRenderer mRender;
+   // LastRenderer mRender;
+    GLRender2 mRender;
+   // GLFrameRenderer mRender;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -64,10 +67,13 @@ public class MainActivity extends AppCompatActivity implements Camera.PreviewCal
         mSurfaceView = findViewById(R.id.surface_view);
         mSurfaceView.setSurfaceTextureListener(this);
         mGLSurfaceView = findViewById(R.id.my_gl_surface_view);
-       // mRender = new MyRenderer(this);
-        mRender = new GLFrameRenderer(null,mGLSurfaceView,getResources().getDisplayMetrics());
+        mGLSurfaceView.setEGLContextClientVersion(2);
+
+        mRender = new GLRender2(this);
+      //mRender = new LastRenderer(this);
         mGLSurfaceView.setRenderer(mRender);
-        mRender.update(mCamWidth,mCamHeight);
+        mGLSurfaceView.setRenderMode(RENDERMODE_WHEN_DIRTY);
+        //mRender.update(mCamWidth,mCamHeight);
         //mGLSurfaceView.setRenderMode(RENDERMODE_WHEN_DIRTY);
         // mHolder = mSurfaceView.getHolder();
         // mHolder.setFormat(PixelFormat.TRANSPARENT);
@@ -112,7 +118,10 @@ public class MainActivity extends AppCompatActivity implements Camera.PreviewCal
             mParametars.setWhiteBalance(Camera.Parameters.WHITE_BALANCE_AUTO);
             mParametars.setSceneMode(Camera.Parameters.SCENE_MODE_AUTO);
             mParametars.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
-            mParametars.setPreviewFormat(ImageFormat.YV12);
+            mParametars.setPreviewFormat(ImageFormat.NV21);
+            mCamera.setPreviewCallbackWithBuffer(this);
+            Log.d(TAG, "preview format ="+mParametars.getPreviewFormat());
+
             //mParametars.setPreviewSize(480,800);
 //            List<Camera.Size> sizeList = mParametars.getSupportedPreviewSizes();
 //            for (Camera.Size size : sizeList) {
@@ -175,7 +184,7 @@ public class MainActivity extends AppCompatActivity implements Camera.PreviewCal
 
     @Override
     public void onPreviewFrame(byte[] bytes, Camera camera) {
-        mRender.update(bytes);
+        mRender.setYuvData(bytes);
         if (mGLSurfaceView != null) {
             mGLSurfaceView.requestRender();
         }
