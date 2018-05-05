@@ -19,7 +19,7 @@ uniform sampler2D u_texture;
     //components of the texture respectively using GL_LUMINANCE_ALPHA.
     //Since U,V bytes are interspread in the texture, this is probably
     //the fastest way to use them in the shader
-    u = texture2D(u_texture, v_texCoord).r- 0.5;
+    u = texture2D(u_texture, v_texCoord).a- 0.5;
     v = texture2D(u_texture, v_texCoord).r- 0.5;
 
     //The numbers are just YUV to RGB conversion constants

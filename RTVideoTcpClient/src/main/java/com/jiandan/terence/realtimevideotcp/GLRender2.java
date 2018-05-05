@@ -22,6 +22,8 @@ import java.nio.ShortBuffer;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
+//参考链接
+//  https://stackoverflow.com/questions/12130790/yuv-to-rgb-conversion-by-fragment-shader#
 public class GLRender2
         implements Renderer, PreviewCallback {
     public static int mCamWidth = 1920;
